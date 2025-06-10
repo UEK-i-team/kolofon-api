@@ -1,0 +1,15 @@
+{
+  "name": "rtcp_configuration",
+  "version": "1.0.0",
+  "main": "sender.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "rtp": "^0.1.0"
+  }
+}
