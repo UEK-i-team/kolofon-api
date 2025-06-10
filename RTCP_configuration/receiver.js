@@ -1,10 +1,7 @@
-const { SrPacket } = require("rtp");
+const { RrPacket } = require("rtp");
 
-// Creating a new SrPacket
-const pkt = new SrPacket();
-pkt.ssrc = 1;
-pkt.ntp_ts = new Date();
-pkt.rtp_ts = 0;
+// Creating a new RrPacket
+const pkt = new RrPacket();
 
 // Add reports
 pkt.addReport({
