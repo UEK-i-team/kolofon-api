@@ -1,54 +1,40 @@
-const { SrPacket } = require("rtp");
-const dgram = require("dgram"); // Import the dgram module
+const dgram = require('dgram');
 
-// Creating a new SrPacket
-const pkt = new SrPacket();
-pkt.ssrc = 1;
-pkt.ntp_ts = new Date();
-pkt.rtp_ts = 0;
+const SIP_PORT = 5060;
+const LISTEN_IP = '0.0.0.0';
 
-// Add reports
-pkt.addReport({
-  ssrc: 1, // Source identifier
-  fraction: 0, // Percentage of packets lost
-  lost: 0, // Cumulative number of packets lost
-  last_seq: 1024, // Highest sequence number received
-  jitter: 0, // Interarrival jitter
-  lsr: 0, // Last SR timestamp
-  dlsr: 0, // Delay since last SR
-});
+let SIP_socket;
 
-// Add optional extension data
-pkt.ext = Buffer.alloc(12);
+function startSipListener() {
+  SIP_socket = dgram.createSocket('udp4');
 
-// Serialize the packet into a Buffer
-const data = pkt.serialize(); // <Buffer ... >
+  SIP_socket.on('error', (err) => {
+    console.error(`SIP socket error: ${err.stack}`);
+    SIP_socket.close();
+  });
 
-// --- Sending the buffer via UDP ---
+  SIP_socket.on('message', (msg, rinfo) => {
+    const SIP_message = msg.toString('utf-8');
+    console.log(`\n--- SIP Message from <span class="math-inline">\{rinfo\.address\}\:</span>{rinfo.port} ---`);
+    console.log(SIP_message);
+    console.log('------------------------------------\n');
+  });
 
-const client = dgram.createSocket("udp4"); // Create a UDP IPv4 socket
+  SIP_socket.on('listening', () => {
+    const address = SIP_socket.address();
+    console.log(`SIP socket listening on <span class="math-inline">\{address\.address\}\:</span>{address.port}`);
+  });
 
-const PORT = 5004; // The port of the receiving application
-const HOST = '192.168.10.5'; // The IP address of the receiving application
+  SIP_socket.bind(SIP_PORT, LISTEN_IP, () => {
+    console.log(`Attempting to bind SIP socket to <span class="math-inline">\{LISTEN\_IP\}\:</span>{SIP_PORT}`);
+  });
+}
 
-client.send(data, PORT, HOST, (err) => {
-  if (err) {
-    console.error(`Error sending packet: ${err}`);
-  } else {
-    console.log(`SR Packet sent to ${HOST}:${PORT}`);
-    // You can optionally close the socket here if you only send one packet,
-    // otherwise keep it open for continuous sending.
-    // client.close();
+function stopSipListener() {
+  if (SIP_socket) {
+    SIP_socket.close();
+    console.log('SIP socket closed');
   }
-});
+}
 
-// Optional: Handle errors on the socket
-client.on('error', (err) => {
-  console.error(`Socket error: ${err.stack}`);
-  client.close();
-});
-
-// Optional: Listen for the socket to be closed
-client.on('close', () => {
-  console.log('Socket closed');
-});
+module.exports = { startSipListener, stopSipListener };

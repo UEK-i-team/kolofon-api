@@ -1,23 +1,51 @@
-const { RrPacket } = require("rtp");
+const dgram = require('dgram')
+const parseRtpHeader = require('./parser');
+const { error } = require('console');
 
-// Creating a new RrPacket
-const pkt = new RrPacket();
+const RTP_PORT = 5004;
+const LISTEN_IP = '192.168.10.5';
 
-// Add reports
-pkt.addReport({
-  ssrc: 1, // Source identifier
-  fraction: 0, // Percentage of packets lost
-  lost: 0, // Cumulative number of packets lost
-  last_seq: 1024, // Highest sequence number received
-  jitter: 0, // Interarrival jitter
-  lsr: 0, // Last SR timestamp
-  dlsr: 0, // Delay since last SR
-});
+let RTP_Socket;
 
-// Add optional extension data
-pkt.ext = Buffer.alloc(12);
+function startRtpReceiver() {
+    RTP_Socket = dgram.createSocket('udp4');
 
-// Serialize
-const data = pkt.serialize(); // <Buffer ... >
+    RTP_Socket.on(error, (err) => {
+      console.error(`RTP error: ${err.stack}`)
+      RTP_Socket.close();
+    });
 
-// ... send the buffer
+    RTP_Socket.on('message', (msg, rinfo) => {
+      try {
+        const RTP_header = parseRtpHeader(msg);
+        if (RTP_header) {
+          console.log(`[RTP header] sequence: ${RTP_header.sequenceNumber},
+            payload: ${RTP_header.payloadType},
+            time: ${RTP_header.timestamp}, 
+            ssrc: ${RTP_header.ssrc.toString(16)}`);
+        } else {
+            console.log(`[RTP] Received malformed or non-RTP like packet from <span class="math-inline">\{rinfo\.address\}\:</span>{rinfo.port}`);
+        }
+      } catch (e) {
+          console.error(`[RTP] Error parsing object: ${e.message}`)
+      }
+    });
+
+    RTP_Socket.on('listening', () => {
+      const address = RTP_Socket.address();
+      console.log(`RTP socket listening on <span class="math-inline">\{address\.address\}\:</span>{address.port}`);
+    });
+
+    RTP_Socket.bind(RTP_PORT, LISTEN_IP, () => {
+      console.log(`Attempting to bind RTP socket to <span class="math-inline">\{LISTEN\_IP\}\:</span>{RTP_PORT}`);
+    });
+}
+
+function stopRtpReceiver() {
+  if (RTP_Socket) {
+    RTP_Socket.close();
+    console.log('RTP socket closed.');
+  }
+}
+
+module.exports = { startRtpReceiver, stopRtpReceiver };
